@@ -19,7 +19,7 @@ private:
 
 class LoggingFileWriter : public FileWriter
 {
-public:
+private:
   void preScript(const std::string &data) const override
   {
     std::cout << "Writing \"" << data << "\" to file\n";
