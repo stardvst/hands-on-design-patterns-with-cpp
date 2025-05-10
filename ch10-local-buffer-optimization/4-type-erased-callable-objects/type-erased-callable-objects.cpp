@@ -80,6 +80,59 @@ private:
   deleter_base *m_deleter;
 };
 
+template <typename T>
+class smart_ptr_te_lb
+{
+  struct deleter_base
+  {
+    virtual void apply(void *ptr) = 0;
+    virtual ~deleter_base() = default;
+  };
+
+  template <typename Deleter>
+  struct deleter_impl : deleter_base
+  {
+    deleter_impl(Deleter deleter) : m_deleter(deleter) {}
+    void apply(void *ptr) override { m_deleter(static_cast<T *>(ptr)); }
+    Deleter m_deleter;
+  };
+
+public:
+  template <typename Deleter>
+  smart_ptr_te_lb(T *ptr, Deleter deleter)
+      : m_ptr(ptr), m_deleter(
+                        (sizeof(Deleter) > sizeof(m_buffer))
+                            ? new deleter_impl<Deleter>(deleter)
+                            : new(m_buffer) deleter_impl<Deleter>(deleter)) {}
+
+  ~smart_ptr_te_lb()
+  {
+    if (m_deleter)
+      m_deleter->apply(m_ptr);
+
+    if (static_cast<void *>(m_deleter) != static_cast<void *>(m_buffer))
+    {
+      // If the deleter was allocated on the heap, delete it
+      delete m_deleter;
+    }
+    else
+    {
+      // If the deleter was allocated on the stack, do not delete it, just call the destructor
+      // This is safe because the deleter is a POD type
+      // and its destructor does not need to be called explicitly.
+      m_deleter->~deleter_base();
+    }
+  }
+
+  T &operator*() const { return *m_ptr; }
+  T *operator->() const { return m_ptr; }
+
+private:
+  T *m_ptr;
+  deleter_base *m_deleter;
+  char m_buffer[16]; // Local buffer for small objects
+};
+
 struct simple_deleter
 {
   template <typename T>
@@ -89,7 +142,7 @@ struct simple_deleter
 int main()
 {
   constexpr std::size_t N = 1000000;
-  double smartPtrTime = 0.0, smartPtrTeTime = 0.0;
+  double smartPtrTime = 0.0, smartPtrTeTime = 0.0, smartPtrTeLbTime = 0.0;
 
   simple_deleter deleter;
   {
@@ -104,12 +157,11 @@ int main()
     smartPtrTeTime = timer.elapsed();
   }
 
-  if (smartPtrTime < smartPtrTeTime)
   {
-    std::cout << "smart_ptr is faster than smart_ptr_te" << std::endl;
+    Timer timer("smart_ptr_te_lb", [&]()
+                { smart_ptr_te_lb<int> sptr(new int(42), deleter); (void)sptr; }, N);
+    smartPtrTeLbTime = timer.elapsed();
   }
-  else
-  {
-    std::cout << "smart_ptr_te is faster than smart_ptr" << std::endl;
-  }
-}
+
+  std::cout << "The fastest smart pointer is: " << (smartPtrTime < smartPtrTeTime ? "smart_ptr" : "smart_ptr_te") << std::endl;
+  std::cout << "The fastest type-erased smart pointer is: " << (smartPtrTeTime < smartPtrTeLbTime ? "smart_ptr_te" : "smart_ptr_te_lb") << std::endl;}
