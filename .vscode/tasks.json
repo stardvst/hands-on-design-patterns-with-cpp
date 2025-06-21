@@ -18,6 +18,7 @@
         "-fcolor-diagnostics",
         "-std=c++20",
         "-O2", // Optimized build (for release)
+        "-fsanitize=address",
         "${workspaceFolder}/${relativeFileDirname}/*.cpp",
         "-o",
         "${workspaceFolder}/build/${relativeFileDirname}/main"
@@ -44,6 +45,7 @@
         "-std=c++20",
         "-g", // Enable debug symbols
         "-O0", // Disable optimizations for easier debugging
+        "-fsanitize=address",
         "${workspaceFolder}/${relativeFileDirname}/*.cpp",
         "-o",
         "${workspaceFolder}/build/${relativeFileDirname}/main_debug" // Separate binary for debug build
