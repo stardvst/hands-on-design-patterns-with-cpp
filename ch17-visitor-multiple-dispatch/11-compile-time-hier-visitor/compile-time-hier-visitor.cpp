@@ -30,8 +30,8 @@ public:
   template <typename This, typename Visitor>
   static void accept(This &thisLine, Visitor &visitor)
   {
-    Point::accept(thisLine.m_p1, visitor);
-    Point::accept(thisLine.m_p2, visitor);
+    visitor.visit(thisLine.m_p1);
+    visitor.visit(thisLine.m_p2);
   }
 
 private:
